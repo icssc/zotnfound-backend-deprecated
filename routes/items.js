@@ -58,11 +58,34 @@ itemsRouter.post("/", async (req, res) => {
     res.json(item.rows[0]); // send the response immediately after adding the item
     let contentString = "";
 
+    async function sendPushNotification() {
+      // filter out undefined keys
+      const subscriptionKeys = subscribedUsers.rows
+        .map((user) => user.notificationKey)
+        .filter((key) => key !== undefined);
+      // send push notification
+      await axios.post(
+        `${process.env.REACT_APP_AWS_BACKEND_URL}/notification/keys`,
+        {
+          subscriptionKeys: subscriptionKeys,
+          notificationTitle: "A nearby item was added.",
+          notificationBody: `A new item, ${name}, was added to ZotnFound!`,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // verify auth
+          },
+        }
+      );
+    }
+    sendPushNotification();
+
     // COMMENT OUT FOR TESTING PURPOSES
     if (process.env.NODE_ENV === "production") {
       function sendDelayedEmail(index) {
         if (index >= subscribedUsers.rows.length) return;
 
+        // send email notification
         let email = subscribedUsers.rows[index].email;
         contentString += `A new item, ${name}, is added to ZotnFound!`;
 
