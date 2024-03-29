@@ -9,8 +9,7 @@ const pool = require("../server/db");
 const templatePath = path.join(__dirname, "../emailTemplate/index.html");
 const template = fs.readFileSync(templatePath, "utf-8");
 const isPositionWithinBounds = require("../util/inbound");
-const {leaderboardTable, itemsTable} = require("../config/db-config.js");
-
+const { leaderboardTable, itemsTable } = require("../config/db-config.js");
 
 //Add a item
 itemsRouter.post("/", async (req, res) => {
@@ -188,7 +187,9 @@ itemsRouter.get("/year", async (req, res) => {
 itemsRouter.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const item = await pool.query(`SELECT * FROM ${itemsTable} WHERE id=$1`, [id]);
+    const item = await pool.query(`SELECT * FROM ${itemsTable} WHERE id=$1`, [
+      id,
+    ]);
     res.json(item.rows[0]);
   } catch (error) {
     console.error(error);
@@ -199,7 +200,10 @@ itemsRouter.get("/:id", async (req, res) => {
 itemsRouter.get("/:id/email", middleware.decodeToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const item = await pool.query(`SELECT email FROM ${itemsTable} WHERE id=$1`, [id]);
+    const item = await pool.query(
+      `SELECT email FROM ${itemsTable} WHERE id=$1`,
+      [id]
+    );
     res.json(item.rows[0]);
   } catch (error) {
     console.error(error);
@@ -210,9 +214,10 @@ itemsRouter.get("/:id/email", middleware.decodeToken, async (req, res) => {
 itemsRouter.get("/category/:category", async (req, res) => {
   try {
     const { category } = req.params;
-    const items = await pool.query(`SELECT * FROM ${itemsTable} WHERE type=$1`, [
-      category,
-    ]);
+    const items = await pool.query(
+      `SELECT * FROM ${itemsTable} WHERE type=$1`,
+      [category]
+    );
     res.json(items.rows);
   } catch (error) {
     console.error(error);
