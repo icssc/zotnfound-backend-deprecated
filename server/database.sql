@@ -21,5 +21,5 @@ CREATE TABLE leaderboard(
     email VARCHAR(255),
     points INTEGER,
     subscription BOOLEAN,
-    notificationKey VARCHAR(500)
+    notification_key VARCHAR(500)
 )

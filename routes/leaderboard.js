@@ -86,7 +86,7 @@ leaderboardRouter.patch(
         return res.status(400).send("Invalid request parameters");
       }
       await pool.query(
-        `UPDATE ${leaderboardTable} SET notificationKey=$1 WHERE email=$2`,
+        `UPDATE ${leaderboardTable} SET notification_key=$1 WHERE email=$2`,
         [notificationKey, email]
       );
       res.send("Notification subscription key updated successfully!");
