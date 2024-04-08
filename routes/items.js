@@ -1,8 +1,10 @@
 const express = require("express");
 const sendEmail = require("../utils");
 const fs = require("fs");
+const webpush = require("web-push");
 const path = require("path");
 const middleware = require("../middleware");
+// const notificationRouter = require("./notification");
 const itemsRouter = express.Router();
 
 const pool = require("../server/db");
@@ -55,37 +57,22 @@ itemsRouter.post("/", async (req, res) => {
       [email]
     );
 
+    // query to get keys of users subscribed for push notifications
+    const userNotifKeys = await pool.query(
+      `SELECT notification_key FROM ${leaderboardTable} WHERE email!=$1 AND subscription=True AND notification_key IS NOT NULL`,
+      [email]
+    );
+
     res.json(item.rows[0]); // send the response immediately after adding the item
     let contentString = "";
 
-    // async function sendPushNotification() {
-    //   // filter out undefined keys
-    //   const subscriptionKeys = subscribedUsers.rows
-    //     .map((user) => user.notification_key)
-    //     .filter((key) => key !== undefined);
-    //   // send push notification
-    //   await axios.post(
-    //     `${process.env.REACT_APP_AWS_BACKEND_URL}/notification/keys`,
-    //     {
-    //       subscriptionKeys: subscriptionKeys,
-    //       notificationTitle: "A nearby item was added.",
-    //       notificationBody: `A new item, ${name}, was added to ZotnFound!`,
-    //     },
-    //     {
-    //       headers: {
-    //         Authorization: `Bearer ${token}`, // verify auth
-    //       },
-    //     }
-    //   );
-    // }
-    // sendPushNotification();
-
     // COMMENT OUT FOR TESTING PURPOSES
     if (process.env.NODE_ENV === "production") {
+      // Send push and email notifications to all subscribed users
+
       function sendDelayedEmail(index) {
         if (index >= subscribedUsers.rows.length) return;
 
-        // send email notification
         let email = subscribedUsers.rows[index].email;
         contentString += `A new item, ${name}, is added to ZotnFound!`;
 
@@ -107,6 +94,29 @@ itemsRouter.post("/", async (req, res) => {
         setTimeout(() => sendDelayedEmail(index + 1), 500); // recursive call to iterate through all user emails
       }
 
+      function sendPushNotifications(
+        subscriptionKeys,
+        notificationTitle,
+        notificationBody
+      ) {
+        console.log("Sending push notifications...");
+        const payload = JSON.stringify({
+          title: notificationTitle,
+          body: notificationBody,
+        });
+
+        subscriptionKeys.forEach((subscription) => {
+          webpush
+            .sendNotification(JSON.parse(subscription), payload)
+            .catch(console.log);
+        });
+      }
+
+      sendPushNotifications(
+        userNotifKeys.rows.map((row) => row.notification_key),
+        "A nearby item was added.",
+        `A new item, ${name}, was added to ZotnFound!`
+      );
       sendDelayedEmail(0);
     }
   } catch (error) {

@@ -30,23 +30,44 @@ notificationRouter.post("/", (req, res) => {
   webpush.sendNotification(subscription, payload).catch(console.log);
 });
 
-// Send notifications to all subscribed users
-notificationRouter.post("/keys", (req, res) => {
-  console.log("Pushing Notifications to All Subscribed Users");
-  // Get array of subscription keys, title, and body
-  const { subscriptionKeys, notificationTitle, notificationBody } = req.body;
-  res.status(201).json({});
-  const payload = JSON.stringify({
-    title: notificationTitle,
-    body: notificationBody,
-  });
-  console.log(subscriptionKeys);
-  subscriptionKeys.forEach((subscription) =>
-    webpush
-      .sendNotification(JSON.parse(subscription), payload)
-      .catch(console.log)
-  );
-});
+// function sendPushNotifications(
+//   subscriptionKeys,
+//   notificationTitle,
+//   notificationBody
+// ) {
+//   console.log("Sending Push Notifications");
+//   const payload = JSON.stringify({
+//     title: notificationTitle,
+//     body: notificationBody,
+//   });
+//   console.log(subscriptionKeys);
+
+//   subscriptionKeys.forEach((subscription) =>
+//     webpush
+//       .sendNotification(JSON.parse(subscription), payload)
+//       .catch(console.log)
+//   );
+// }
+
+// // Send notifications to all subscribed users
+// notificationRouter.post("/keys", (req, res) => {
+//   console.log("Pushing Notifications to All Subscribed Users");
+//   const { subscriptionKeys, notificationTitle, notificationBody } = req.body;
+//   res.status(201).json({});
+
+//   console.log("Sending Push Notifications");
+//   const payload = JSON.stringify({
+//     title: notificationTitle,
+//     body: notificationBody,
+//   });
+//   console.log(subscriptionKeys);
+
+//   subscriptionKeys.forEach((subscription) =>
+//     webpush
+//       .sendNotification(JSON.parse(subscription), payload)
+//       .catch(console.log)
+//   );
+// });
 
 notificationRouter.get("/test", (req, res) => {
   console.log("Testing Routing!");
@@ -54,3 +75,7 @@ notificationRouter.get("/test", (req, res) => {
 });
 
 module.exports = notificationRouter;
+// module.exports = {
+//   router: notificationRouter,
+//   sendPushNotifications: sendPushNotifications,
+// };
