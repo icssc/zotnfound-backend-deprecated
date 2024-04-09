@@ -1,7 +1,7 @@
 const express = require("express");
 const leaderboardRouter = express.Router();
 const middleware = require("../middleware");
-const {leaderboardTable} = require("../config/db-config.js");
+const { leaderboardTable } = require("../config/db-config.js");
 
 const pool = require("../server/db");
 // add a user to leaderboard
@@ -75,6 +75,28 @@ leaderboardRouter.patch(
   }
 );
 
+// Update user's notification subscription key
+leaderboardRouter.patch(
+  "/changeNotificationKey",
+  middleware.decodeToken,
+  async (req, res) => {
+    try {
+      const { notificationKey, email } = req.body;
+      if (!notificationKey || !email) {
+        return res.status(400).send("Invalid request parameters");
+      }
+      await pool.query(
+        `UPDATE ${leaderboardTable} SET notification_key=$1 WHERE email=$2`,
+        [notificationKey, email]
+      );
+      res.send("Notification subscription key updated successfully!");
+    } catch (err) {
+      console.error(err);
+      res.status(500).send("Internal server error");
+    }
+  }
+);
+
 // update user's points
 leaderboardRouter.put("/", middleware.decodeToken, async (req, res) => {
   const { email, pointsToAdd } = req.body; // Assume you're sending email and pointsToAdd in the request body
@@ -98,10 +120,10 @@ leaderboardRouter.put("/", middleware.decodeToken, async (req, res) => {
     const newPoints = currentPoints + pointsToAdd;
 
     // Now, update the user's points in the leaderboard
-    await pool.query(`UPDATE ${leaderboardTable} SET points=$1 WHERE email=$2`, [
-      newPoints,
-      email,
-    ]);
+    await pool.query(
+      `UPDATE ${leaderboardTable} SET points=$1 WHERE email=$2`,
+      [newPoints, email]
+    );
 
     res.send("Points updated successfully");
   } catch (err) {

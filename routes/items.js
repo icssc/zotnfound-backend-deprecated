@@ -1,16 +1,17 @@
 const express = require("express");
 const sendEmail = require("../utils");
 const fs = require("fs");
+const webpush = require("web-push");
 const path = require("path");
 const middleware = require("../middleware");
+// const notificationRouter = require("./notification");
 const itemsRouter = express.Router();
 
 const pool = require("../server/db");
 const templatePath = path.join(__dirname, "../emailTemplate/index.html");
 const template = fs.readFileSync(templatePath, "utf-8");
 const isPositionWithinBounds = require("../util/inbound");
-const {leaderboardTable, itemsTable} = require("../config/db-config.js");
-
+const { leaderboardTable, itemsTable } = require("../config/db-config.js");
 
 //Add a item
 itemsRouter.post("/", async (req, res) => {
@@ -56,11 +57,19 @@ itemsRouter.post("/", async (req, res) => {
       [email]
     );
 
+    // query to get keys of users subscribed for push notifications
+    const userNotifKeys = await pool.query(
+      `SELECT notification_key FROM ${leaderboardTable} WHERE email!=$1 AND subscription=True AND notification_key IS NOT NULL`,
+      [email]
+    );
+
     res.json(item.rows[0]); // send the response immediately after adding the item
     let contentString = "";
 
     // COMMENT OUT FOR TESTING PURPOSES
     if (process.env.NODE_ENV === "production") {
+      // Send push and email notifications to all subscribed users
+
       function sendDelayedEmail(index) {
         if (index >= subscribedUsers.rows.length) return;
 
@@ -85,6 +94,29 @@ itemsRouter.post("/", async (req, res) => {
         setTimeout(() => sendDelayedEmail(index + 1), 500); // recursive call to iterate through all user emails
       }
 
+      function sendPushNotifications(
+        subscriptionKeys,
+        notificationTitle,
+        notificationBody
+      ) {
+        console.log("Sending push notifications...");
+        const payload = JSON.stringify({
+          title: notificationTitle,
+          body: notificationBody,
+        });
+
+        subscriptionKeys.forEach((subscription) => {
+          webpush
+            .sendNotification(JSON.parse(subscription), payload)
+            .catch(console.log);
+        });
+      }
+
+      sendPushNotifications(
+        userNotifKeys.rows.map((row) => row.notification_key),
+        "A nearby item was added.",
+        `A new item, ${name}, was added to ZotnFound!`
+      );
       sendDelayedEmail(0);
     }
   } catch (error) {
@@ -188,7 +220,9 @@ itemsRouter.get("/year", async (req, res) => {
 itemsRouter.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const item = await pool.query(`SELECT * FROM ${itemsTable} WHERE id=$1`, [id]);
+    const item = await pool.query(`SELECT * FROM ${itemsTable} WHERE id=$1`, [
+      id,
+    ]);
     res.json(item.rows[0]);
   } catch (error) {
     console.error(error);
@@ -199,7 +233,10 @@ itemsRouter.get("/:id", async (req, res) => {
 itemsRouter.get("/:id/email", middleware.decodeToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const item = await pool.query(`SELECT email FROM ${itemsTable} WHERE id=$1`, [id]);
+    const item = await pool.query(
+      `SELECT email FROM ${itemsTable} WHERE id=$1`,
+      [id]
+    );
     res.json(item.rows[0]);
   } catch (error) {
     console.error(error);
@@ -210,9 +247,10 @@ itemsRouter.get("/:id/email", middleware.decodeToken, async (req, res) => {
 itemsRouter.get("/category/:category", async (req, res) => {
   try {
     const { category } = req.params;
-    const items = await pool.query(`SELECT * FROM ${itemsTable} WHERE type=$1`, [
-      category,
-    ]);
+    const items = await pool.query(
+      `SELECT * FROM ${itemsTable} WHERE type=$1`,
+      [category]
+    );
     res.json(items.rows);
   } catch (error) {
     console.error(error);
